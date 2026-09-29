@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.CommonColors;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.enchantment.Enchantment;
 
@@ -23,23 +24,24 @@ import name.modid.client.analysis.AnvilOperationAnalyzer;
 import org.jspecify.annotations.Nullable;
 
 public final class AnvilInsightPanel {
-	private static final int BACKGROUND_COLOR = 0xF0C6C6C6;
-	private static final int BORDER_DARK = 0xFF373737;
-	private static final int BORDER_LIGHT = 0xFFFFFFFF;
-	private static final int SEPARATOR_COLOR = 0x805A5A5A;
-	private static final int TEXT_COLOR = 0xFF404040;
-	private static final int PRIMARY_COLOR = 0xFF202020;
-	private static final int MUTED_COLOR = 0xFF5D5D5D;
-	private static final int SUCCESS_COLOR = 0xFF2F7F2F;
-	private static final int WARNING_COLOR = 0xFF986300;
-	private static final int ERROR_COLOR = 0xFFAA0000;
-	private static final int TITLE_HEIGHT = 24;
-	private static final int CONTENT_PADDING = 6;
+	private static final int TEXT_COLOR = CommonColors.LIGHT_GRAY;
+	private static final int PRIMARY_COLOR = CommonColors.WHITE;
+	private static final int MUTED_COLOR = CommonColors.GRAY;
+	private static final int SUCCESS_COLOR = CommonColors.GREEN;
+	private static final int WARNING_COLOR = CommonColors.YELLOW;
+	private static final int ERROR_COLOR = CommonColors.RED;
+	private static final int SEPARATOR_COLOR = 0xFF555555;
+	private static final int HOVER_COLOR = 0x30FFFFFF;
+	private static final int TITLE_HEIGHT = 23;
+	private static final int CONTENT_PADDING = 8;
+	private static final int CONTENT_BOTTOM_PADDING = 6;
 	private static final int SCROLLBAR_GUTTER = 4;
-	private static final int LINE_HEIGHT = 10;
+	private static final int LINE_HEIGHT = 11;
 	private static final int ENTRY_INDENT = 5;
 	private static final int VANILLA_TOOLTIP_WIDTH = 170;
 	private static final int VANILLA_SCROLLBAR_WIDTH = 6;
+	private static final int VANILLA_SCROLLBAR_MIN_HEIGHT = 32;
+	private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("popup/background");
 	private static final Identifier SCROLLER_SPRITE = Identifier.withDefaultNamespace("widget/scroller");
 	private static final Identifier SCROLLER_BACKGROUND_SPRITE = Identifier.withDefaultNamespace("widget/scroller_background");
 
@@ -58,13 +60,13 @@ public final class AnvilInsightPanel {
 		drawFrame(graphics, bounds);
 		Component title = Component.translatable("anvilinsight.panel.title");
 		int titleX = bounds.x() + (bounds.width() - font.width(title)) / 2;
-		graphics.text(font, title, titleX, bounds.y() + 7, PRIMARY_COLOR, false);
-		graphics.fill(bounds.x() + 4, bounds.y() + 19, bounds.right() - 4, bounds.y() + 20, BORDER_DARK);
+		graphics.text(font, title, titleX, bounds.y() + 7, PRIMARY_COLOR, true);
+		graphics.fill(bounds.x() + 6, bounds.y() + 20, bounds.right() - 6, bounds.y() + 21, SEPARATOR_COLOR);
 
 		int contentLeft = bounds.x() + CONTENT_PADDING;
 		int contentRight = bounds.right() - CONTENT_PADDING - SCROLLBAR_GUTTER;
 		int contentTop = bounds.y() + TITLE_HEIGHT;
-		int contentBottom = bounds.bottom() - 5;
+		int contentBottom = bounds.bottom() - CONTENT_BOTTOM_PADDING;
 		int maxScroll = maxScroll(content, bounds);
 		int appliedScroll = Math.min(Math.max(0, scrollOffset), maxScroll);
 		int y = contentTop - appliedScroll;
@@ -74,6 +76,9 @@ public final class AnvilInsightPanel {
 		for (Row row : content.rows) {
 			int rowTop = y;
 			int rowBottom = y + row.height();
+			boolean hovered = row.tooltip() != null
+				&& mouseX >= contentLeft && mouseX < contentRight
+				&& mouseY >= Math.max(rowTop, contentTop) && mouseY < Math.min(rowBottom, contentBottom);
 			if (row.separator()) {
 				int separatorY = y + row.height() / 2;
 				if (separatorY >= contentTop && separatorY < contentBottom) {
@@ -82,19 +87,20 @@ public final class AnvilInsightPanel {
 			} else if (row.text() != null || row.value() != null) {
 				int textY = y + row.textOffset();
 				if (textY + font.lineHeight >= contentTop && textY < contentBottom) {
+					if (hovered) {
+						graphics.fill(contentLeft - 2, Math.max(rowTop, contentTop), contentRight, Math.min(rowBottom, contentBottom), HOVER_COLOR);
+					}
 					if (row.text() != null) {
-						graphics.text(font, row.text(), contentLeft + row.indent(), textY, row.color(), false);
+						graphics.text(font, row.text(), contentLeft + row.indent(), textY, row.color(), true);
 					}
 					if (row.value() != null) {
 						int valueWidth = font.width(row.value());
-						graphics.text(font, row.value(), contentRight - valueWidth, textY, row.valueColor(), false);
+						graphics.text(font, row.value(), contentRight - valueWidth, textY, row.valueColor(), true);
 					}
 				}
 			}
 
-			if (row.tooltip() != null
-				&& mouseX >= contentLeft && mouseX < contentRight
-				&& mouseY >= Math.max(rowTop, contentTop) && mouseY < Math.min(rowBottom, contentBottom)) {
+			if (hovered) {
 				hoveredTooltip = row.tooltip();
 			}
 			y = rowBottom;
@@ -102,7 +108,7 @@ public final class AnvilInsightPanel {
 		graphics.disableScissor();
 
 		if (maxScroll > 0) {
-			drawScrollbar(graphics, bounds, content, appliedScroll, maxScroll, contentTop, contentBottom);
+			drawScrollbar(graphics, bounds, content, appliedScroll);
 		}
 		if (hoveredTooltip != null) {
 			int tooltipWidth = Math.min(VANILLA_TOOLTIP_WIDTH, Math.max(1, graphics.guiWidth() - 16));
@@ -118,36 +124,56 @@ public final class AnvilInsightPanel {
 	}
 
 	public static int maxScroll(final Content content, final PanelBounds bounds) {
-		int viewportHeight = bounds.height() - TITLE_HEIGHT - 5;
+		int viewportHeight = bounds.height() - TITLE_HEIGHT - CONTENT_BOTTOM_PADDING;
 		return Math.max(0, content.height - viewportHeight);
 	}
 
+	public static ScrollbarGeometry scrollbarGeometry(
+		final Content content,
+		final PanelBounds bounds,
+		final int scrollOffset
+	) {
+		int trackX = bounds.right() - VANILLA_SCROLLBAR_WIDTH - 2;
+		int trackTop = bounds.y() + TITLE_HEIGHT;
+		int trackBottom = bounds.bottom() - CONTENT_BOTTOM_PADDING;
+		int trackHeight = trackBottom - trackTop;
+		int thumbHeight = Math.min(
+			trackHeight - 8,
+			Math.max(VANILLA_SCROLLBAR_MIN_HEIGHT, trackHeight * trackHeight / content.height)
+		);
+		int maxScroll = maxScroll(content, bounds);
+		int thumbTravel = trackHeight - thumbHeight;
+		int appliedScroll = Math.min(Math.max(0, scrollOffset), maxScroll);
+		int thumbY = trackTop + (maxScroll == 0 ? 0 : thumbTravel * appliedScroll / maxScroll);
+		return new ScrollbarGeometry(trackX, trackTop, trackHeight, thumbY, thumbHeight, maxScroll);
+	}
+
 	private static void drawFrame(final GuiGraphicsExtractor graphics, final PanelBounds bounds) {
-		graphics.fill(bounds.x(), bounds.y(), bounds.right(), bounds.bottom(), BACKGROUND_COLOR);
-		graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), BORDER_DARK);
-		graphics.fill(bounds.x() + 1, bounds.y() + 1, bounds.right() - 1, bounds.y() + 2, BORDER_LIGHT);
-		graphics.fill(bounds.x() + 1, bounds.y() + 1, bounds.x() + 2, bounds.bottom() - 1, BORDER_LIGHT);
+		graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, bounds.x(), bounds.y(), bounds.width(), bounds.height());
 	}
 
 	private static void drawScrollbar(
 		final GuiGraphicsExtractor graphics,
 		final PanelBounds bounds,
 		final Content content,
-		final int scrollOffset,
-		final int maxScroll,
-		final int contentTop,
-		final int contentBottom
+		final int scrollOffset
 	) {
-		int trackX = bounds.right() - VANILLA_SCROLLBAR_WIDTH - 2;
-		int trackHeight = contentBottom - contentTop;
-		int thumbHeight = Math.max(12, trackHeight * trackHeight / content.height);
-		int thumbTravel = trackHeight - thumbHeight;
-		int thumbY = contentTop + (maxScroll == 0 ? 0 : thumbTravel * scrollOffset / maxScroll);
+		ScrollbarGeometry scrollbar = scrollbarGeometry(content, bounds, scrollOffset);
 		graphics.blitSprite(
-			RenderPipelines.GUI_TEXTURED, SCROLLER_BACKGROUND_SPRITE, trackX, contentTop, VANILLA_SCROLLBAR_WIDTH, trackHeight
+			RenderPipelines.GUI_TEXTURED,
+			SCROLLER_BACKGROUND_SPRITE,
+			scrollbar.x(),
+			scrollbar.trackTop(),
+			VANILLA_SCROLLBAR_WIDTH,
+			scrollbar.trackHeight()
 		);
 		graphics.blitSprite(
-			RenderPipelines.GUI_TEXTURED, SCROLLER_SPRITE, trackX, thumbY, VANILLA_SCROLLBAR_WIDTH, thumbHeight
+			RenderPipelines.GUI_TEXTURED,
+			SCROLLER_SPRITE,
+			scrollbar.x(),
+			scrollbar.thumbY(),
+			VANILLA_SCROLLBAR_WIDTH,
+			scrollbar.thumbHeight()
 		);
 	}
 
@@ -485,6 +511,17 @@ public final class AnvilInsightPanel {
 		private Content(final List<Row> rows, final int height) {
 			this.rows = rows;
 			this.height = height;
+		}
+	}
+
+	public record ScrollbarGeometry(int x, int trackTop, int trackHeight, int thumbY, int thumbHeight, int maxScroll) {
+		public int thumbTravel() {
+			return this.trackHeight - this.thumbHeight;
+		}
+
+		public boolean containsThumb(final double mouseX, final double mouseY) {
+			return mouseX >= this.x && mouseX < this.x + VANILLA_SCROLLBAR_WIDTH
+				&& mouseY >= this.thumbY && mouseY < this.thumbY + this.thumbHeight;
 		}
 	}
 

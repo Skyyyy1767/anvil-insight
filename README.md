@@ -9,11 +9,11 @@ Anvil Insight is a client-side Fabric mod for Minecraft 26.3. It adds a small in
 - Fabric API: 0.160.7+26.3
 - Fabric Loom: 1.17.21
 - Gradle: 9.6.0
-- Mod version: 1.0.0+mc26.3
+- Mod version: 1.1+mc26.3
 - Java release: 25
 - Mappings: no external mappings dependency; Minecraft 26.3 exposes the Mojang-named classes used by Loom directly
 
-Use a Java 25 or newer JDK and run `./gradlew build`. `./gradlew runClient` launches the development client. The release JAR is `build/libs/anvil-insight-1.0.0+mc26.3.jar`; the `-sources.jar` is for development only.
+Use a Java 25 or newer JDK and run `./gradlew build`. `./gradlew runClient` launches the development client. The release JAR is `build/libs/anvil-insight-1.1+mc26.3.jar`; the `-sources.jar` is for development only.
 
 ## Design
 

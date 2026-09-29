@@ -2,6 +2,8 @@ package name.modid.client.gui;
 
 import java.util.List;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
@@ -21,15 +23,15 @@ import name.modid.client.analysis.AnvilAnalysis;
 import name.modid.client.analysis.AnvilOperationAnalyzer;
 import name.modid.client.gui.AnvilInsightPanel.Content;
 import name.modid.client.gui.AnvilInsightPanel.PanelBounds;
+import name.modid.client.gui.AnvilInsightPanel.ScrollbarGeometry;
 import name.modid.client.mixin.AbstractContainerScreenAccessor;
 
 public final class AnvilInsightController {
-	private static final Component ICON = Component.literal("ⓘ");
+	private static final Component ICON = Component.literal("i");
 	private static final int GAP = 4;
 	private static final int SCREEN_MARGIN = 4;
-	private static final int PREFERRED_PANEL_WIDTH = 156;
-	private static final int BUTTON_SIZE = 12;
-	private static final int BUTTON_TITLE_GAP = 3;
+	private static final int PREFERRED_PANEL_WIDTH = 176;
+	private static final int BUTTON_SIZE = 14;
 
 	private final Minecraft client;
 	private final AnvilScreen screen;
@@ -45,6 +47,8 @@ public final class AnvilInsightController {
 	private String lastName = "";
 	private boolean lastCreative;
 	private int scrollOffset;
+	private boolean draggingScrollbar;
+	private double scrollbarDragOffset;
 
 	private AnvilInsightController(final Minecraft client, final AnvilScreen screen, final EditBox nameBox) {
 		this.client = client;
@@ -76,6 +80,7 @@ public final class AnvilInsightController {
 		this.insightButton = new InsightButton(button -> {
 			AnvilInsightClient.togglePanel();
 			this.scrollOffset = 0;
+			this.draggingScrollbar = false;
 			this.updateLayout();
 			this.updateButtonTooltip();
 		});
@@ -94,7 +99,43 @@ public final class AnvilInsightController {
 			}
 		});
 		ScreenMouseEvents.allowMouseClick(this.screen).register((ignored, event) -> {
-			return !AnvilInsightClient.isPanelOpen() || !this.panelBounds.contains(event.x(), event.y());
+			if (!AnvilInsightClient.isPanelOpen() || !this.panelBounds.contains(event.x(), event.y())) {
+				return true;
+			}
+
+			if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && this.panelContent != null) {
+				ScrollbarGeometry scrollbar = AnvilInsightPanel.scrollbarGeometry(
+					this.panelContent, this.panelBounds, this.scrollOffset
+				);
+				if (scrollbar.maxScroll() > 0 && scrollbar.containsThumb(event.x(), event.y())) {
+					this.draggingScrollbar = true;
+					this.scrollbarDragOffset = event.y() - scrollbar.thumbY();
+				}
+			}
+			return false;
+		});
+		ScreenMouseEvents.allowMouseDrag(this.screen).register((ignored, event, horizontalAmount, verticalAmount) -> {
+			if (!this.draggingScrollbar || event.button() != InputConstants.MOUSE_BUTTON_LEFT || this.panelContent == null) {
+				return true;
+			}
+
+			ScrollbarGeometry scrollbar = AnvilInsightPanel.scrollbarGeometry(
+				this.panelContent, this.panelBounds, this.scrollOffset
+			);
+			double thumbPosition = event.y() - this.scrollbarDragOffset - scrollbar.trackTop();
+			double clampedPosition = Math.max(0.0, Math.min(scrollbar.thumbTravel(), thumbPosition));
+			this.scrollOffset = scrollbar.thumbTravel() == 0
+				? 0
+				: (int)Math.round(clampedPosition * scrollbar.maxScroll() / scrollbar.thumbTravel());
+			return false;
+		});
+		ScreenMouseEvents.allowMouseRelease(this.screen).register((ignored, event) -> {
+			if (!this.draggingScrollbar || event.button() != InputConstants.MOUSE_BUTTON_LEFT) {
+				return true;
+			}
+
+			this.draggingScrollbar = false;
+			return false;
 		});
 		ScreenMouseEvents.afterMouseScroll(this.screen).register((ignored, mouseX, mouseY, horizontalAmount, verticalAmount, consumed) -> {
 			if (!AnvilInsightClient.isPanelOpen() || !this.panelBounds.contains(mouseX, mouseY) || this.panelContent == null) {
@@ -128,9 +169,7 @@ public final class AnvilInsightController {
 		this.screenAccessor.anvilInsight$setLeftPos(left);
 		this.nameBox.setX(left + 62);
 		int top = this.screenAccessor.anvilInsight$getTopPos();
-		int titleRight = this.screenAccessor.anvilInsight$getTitleLabelX() + this.screen.getFont().width(this.screen.getTitle());
-		int buttonY = top + this.screenAccessor.anvilInsight$getTitleLabelY() - 2;
-		this.insightButton.setPosition(left + titleRight + BUTTON_TITLE_GAP, buttonY);
+		this.insightButton.setPosition(left + imageWidth - BUTTON_SIZE - 4, top + 5);
 		int previousPanelWidth = this.panelBounds.width();
 		this.panelBounds = new PanelBounds(left + imageWidth + GAP, top, panelWidth, imageHeight);
 		if (this.analysis != null && previousPanelWidth != panelWidth) {
@@ -172,10 +211,6 @@ public final class AnvilInsightController {
 	}
 
 	private static final class InsightButton extends Button {
-		private static final int ICON_SIZE = 8;
-		private static final int ICON_BACKGROUND = 0xFF404040;
-		private static final int ICON_FOREGROUND = 0xFFFFFFFF;
-
 		private InsightButton(final OnPress onPress) {
 			super(
 				0,
@@ -189,18 +224,17 @@ public final class AnvilInsightController {
 		}
 
 		@Override
-		protected void extractContents(final net.minecraft.client.gui.GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+		protected void extractContents(
+			final net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+			final int mouseX,
+			final int mouseY,
+			final float partialTick
+		) {
 			this.extractDefaultSprite(graphics);
-			int left = this.getX() + (this.getWidth() - ICON_SIZE) / 2;
-			int top = this.getY() + (this.getHeight() - ICON_SIZE) / 2;
-
-			graphics.fill(left + 2, top, left + 6, top + 1, ICON_BACKGROUND);
-			graphics.fill(left + 1, top + 1, left + 7, top + 2, ICON_BACKGROUND);
-			graphics.fill(left, top + 2, left + 8, top + 6, ICON_BACKGROUND);
-			graphics.fill(left + 1, top + 6, left + 7, top + 7, ICON_BACKGROUND);
-			graphics.fill(left + 2, top + 7, left + 6, top + 8, ICON_BACKGROUND);
-			graphics.fill(left + 3, top + 2, left + 5, top + 3, ICON_FOREGROUND);
-			graphics.fill(left + 3, top + 4, left + 5, top + 7, ICON_FOREGROUND);
+			this.extractDefaultLabel(graphics.textRendererForWidget(
+				this,
+				net.minecraft.client.gui.GuiGraphicsExtractor.HoveredTextEffects.NONE
+			));
 		}
 	}
 }

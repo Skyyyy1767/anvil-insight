@@ -8,9 +8,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(AbstractContainerScreen.class)
 public interface AbstractContainerScreenAccessor {
 	@Accessor("leftPos")
-	int anvilInsight$getLeftPos();
-
-	@Accessor("leftPos")
 	void anvilInsight$setLeftPos(int leftPos);
 
 	@Accessor("topPos")
@@ -21,10 +18,4 @@ public interface AbstractContainerScreenAccessor {
 
 	@Accessor("imageHeight")
 	int anvilInsight$getImageHeight();
-
-	@Accessor("titleLabelX")
-	int anvilInsight$getTitleLabelX();
-
-	@Accessor("titleLabelY")
-	int anvilInsight$getTitleLabelY();
 }
