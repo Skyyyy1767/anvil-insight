@@ -1,31 +1,58 @@
 # Anvil Insight
 
-Anvil Insight is a client-side Fabric mod for Minecraft 26.3. It adds a small information button to the vanilla anvil screen. The expandable panel explains the synchronized vanilla level cost, enchantment changes and conflicts, repair work, renaming, prior-work penalties, and the survival cost limit without changing any anvil mechanics.
+Anvil Insight is a client-side mod for Minecraft 26.3. It adds a small information button to the vanilla anvil screen. The expandable panel explains the synchronized vanilla level cost, enchantment changes and conflicts, repair work, renaming, prior-work penalties, and the survival cost limit without changing any anvil mechanics.
+
+Anvil Insight supports Fabric, Quilt, NeoForge, and Forge. Install the jar whose loader name matches the instance.
 
 ## Development
 
 - Minecraft: 26.3
-- Fabric Loader: 0.19.5
-- Fabric API: 0.160.7+26.3
-- Fabric Loom: 1.17.21
-- Gradle: 9.6.0
 - Mod version: 1.1+mc26.3
 - Java release: 25
-- Mappings: no external mappings dependency; Minecraft 26.3 exposes the Mojang-named classes used by Loom directly
+- Gradle: 9.6.0
+- Fabric Loader: 0.19.5
+- Quilt Loader: 0.31.0-beta.4
+- NeoForge: 26.3.0.33-beta
+- Forge: 26.3-66.0.8
 
-Use a Java 25 or newer JDK and run `./gradlew build`. `./gradlew runClient` launches the development client. The release JAR is `build/libs/anvil-insight-1.1+mc26.3.jar`; the `-sources.jar` is for development only.
+Use a Java 25 or newer JDK. Build every distribution with:
+
+```shell
+./gradlew build
+```
+
+Individual loader builds are available as `:fabric:build`, `:quilt:build`, `:neoforge:build`, and `:forge:build`. Distributable jars are written to each loader module's `build/libs` directory:
+
+- `fabric/build/libs/anvil-insight-fabric-1.1+mc26.3.jar`
+- `quilt/build/libs/anvil-insight-quilt-1.1+mc26.3.jar`
+- `neoforge/build/libs/anvil-insight-neoforge-1.1+mc26.3.jar`
+- `forge/build/libs/anvil-insight-forge-1.1+mc26.3.jar`
+
+The `-sources.jar` files are for development only.
+
+IntelliJ IDEA imports four shared Run/Debug configurations: `Fabric Client`, `Quilt Client`, `NeoForge Client`, and `Forge Client`. Each runs from an isolated directory under `run/<loader>`. The equivalent root Gradle tasks are `runFabricClient`, `runQuiltClient`, `runNeoForgeClient`, and `runForgeClient`.
+
+## Project structure
+
+`common` is a source-only shared module. It contains the anvil analysis, vanilla-style panel and controller, translations, icon, and client mixins. Every loader compiles those same sources into its own distributable jar, so feature changes do not need to be copied between loaders.
+
+`fabric`, `quilt`, `neoforge`, and `forge` contain only their build configuration, loader metadata, and any required loader entry class. Fabric and Quilt need no entry class because the shared mixins attach the interface directly to the vanilla anvil screen. NeoForge and Forge contain minimal loader discovery classes.
+
+Dependency and project versions are centralized in `gradle.properties`. Fabric Loom builds both the Fabric and Quilt artifacts because Minecraft 26.3 is available with the official class names while Quilt Loom does not publish 26.3 mappings. The Quilt artifact still targets Quilt Loader and contains Quilt metadata only. NeoForge uses ModDevGradle, and Forge uses ForgeGradle.
+
+Forge-family mod IDs cannot contain hyphens, so NeoForge and Forge use `anvil_insight`; Fabric and Quilt retain the existing `anvil-insight` ID.
 
 ## Design
 
 The total shown by the panel always comes from `AnvilMenu#getCost`, the same synchronized value used by the vanilla screen. Detailed rows mirror Minecraft 26.3's `AnvilMenu#createResult` algorithm. If the mirrored breakdown and vanilla total ever disagree during a transient synchronization state, detailed numeric rows are withheld instead of presenting an approximation.
 
-The mod uses Fabric screen events for the button and rendering. Its only mod-owned Mixin is an accessor for the vanilla container origin, used to keep both panels on-screen in narrow windows. It has no custom networking and is marked client-only.
+Shared client mixins connect the controller to `AnvilScreen` and route rendering, clicks, dragging, releases, and mouse-wheel scrolling through the existing panel behavior. Loader APIs do not appear in the UI or analysis code.
+
+The project compiles and runs on Java 25, while the shared Mixin configuration declares `JAVA_21`, the highest compatibility level recognized by both Fabric's Mixin fork and Forge's upstream Mixin 0.8.7 runtime. The shared mixins do not require language features above that level.
 
 ## Validation
 
-The migration was built with Gradle 9.6.0 on Temurin 26.0.2.1, targeting Java 25 bytecode. There are no automated test sources; Gradle reports `test NO-SOURCE`. The development client reached the Minecraft 26.3 title screen, loaded Anvil Insight, and exited cleanly. Mixin export confirmed all seven container accessor methods were applied without transformation errors.
-
-The vanilla anvil menu's disassembled bytecode was identical before and after the migration, so the existing cost calculations did not require changes. Manual in-game validation remains for repairs, enchantment combinations and conflicts, renaming, prior-work costs, the 39/40-level boundary, Creative mode, panel scrolling, tooltips, and narrow-window layout. Development-account authentication failures for online services do not prevent local startup.
+All four loader distributions compile and build from the root Gradle build. The built jars are checked for their loader-specific metadata, the shared mixin configuration, the shared UI classes, and loader-specific filenames. No Minecraft client launch is required for routine build validation.
 
 ## License
 

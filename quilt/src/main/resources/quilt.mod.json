@@ -1,0 +1,36 @@
+{
+	"schema_version": 1,
+	"quilt_loader": {
+		"group": "${group}",
+		"id": "anvil-insight",
+		"version": "${version}",
+		"metadata": {
+			"name": "Anvil Insight",
+			"description": "Adds an optional panel to the vanilla anvil interface that explains operation costs, enchantment changes, prior-work penalties, repairs, incompatibilities, and Too Expensive operations.",
+			"license": "CC0-1.0",
+			"icon": "assets/anvil-insight/icon.png"
+		},
+		"intermediate_mappings": "net.fabricmc:intermediary",
+		"depends": [
+			{
+				"id": "quilt_loader",
+				"versions": ">=${quilt_loader_version}"
+			},
+			{
+				"id": "fabric-resource-loader-v1",
+				"versions": ">=${fabric_resource_loader_version}"
+			},
+			{
+				"id": "minecraft",
+				"versions": "=${minecraft_version}"
+			}
+		]
+	},
+	"mixin": {
+		"config": "anvil-insight.mixins.json",
+		"environment": "client"
+	},
+	"minecraft": {
+		"environment": "client"
+	}
+}

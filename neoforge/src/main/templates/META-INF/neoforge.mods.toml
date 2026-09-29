@@ -1,0 +1,27 @@
+license="${mod_license}"
+
+[[mixins]]
+config="anvil-insight.mixins.json"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+iconFile="assets/anvil-insight/icon.png"
+description='''
+Adds an optional panel to the vanilla anvil interface that explains operation costs, enchantment changes, prior-work penalties, repairs, incompatibilities, and Too Expensive operations.
+'''
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="[${neoforge_version},)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="[${minecraft_version}]"
+ordering="NONE"
+side="CLIENT"

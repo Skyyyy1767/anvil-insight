@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="${forge_loader_version_range}"
+license="${mod_license}"
+clientSideOnly=true
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+logoFile="assets/anvil-insight/icon.png"
+description='''
+Explains anvil costs, enchantment changes, conflicts, repairs, renaming, and prior-work penalties.
+'''
+
+[[dependencies.${mod_id}]]
+modId="forge"
+mandatory=true
+versionRange="${forge_loader_version_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="[${minecraft_version},26.4)"
+ordering="NONE"
+side="CLIENT"

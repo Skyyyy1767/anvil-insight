@@ -1,53 +1,40 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'base'
 }
 
-base {
-	archivesName = 'anvil-insight'
+group = project.maven_group
+version = project.mod_version
+
+tasks.register('buildAll') {
+	group = 'build'
+	description = 'Builds every loader distribution.'
+	dependsOn subprojects.collect { it.tasks.named('build') }
 }
 
-loom {
-	splitEnvironmentSourceSets()
-
-	mods {
-		"anvil-insight" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
+tasks.named('build') {
+	dependsOn tasks.named('buildAll')
 }
 
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+tasks.register('runFabricClient') {
+	group = 'application'
+	description = 'Runs the Fabric development client.'
+	dependsOn ':fabric:runClient'
 }
 
-processResources {
-	def version = project.version
-	inputs.property "version", version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
+tasks.register('runQuiltClient') {
+	group = 'application'
+	description = 'Runs the Quilt development client.'
+	dependsOn ':quilt:runClient'
 }
 
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+tasks.register('runNeoForgeClient') {
+	group = 'application'
+	description = 'Runs the NeoForge development client.'
+	dependsOn ':neoforge:runClient'
 }
 
-java {
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
+tasks.register('runForgeClient') {
+	group = 'application'
+	description = 'Runs the Forge development client.'
+	dependsOn ':forge:runClient'
 }

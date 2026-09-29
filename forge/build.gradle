@@ -1,0 +1,74 @@
+plugins {
+	id 'java-library'
+	id 'net.minecraftforge.gradle' version "${forgegradle_version}"
+}
+
+version = rootProject.version
+group = rootProject.group
+
+base {
+	archivesName = "${rootProject.name}-forge"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
+
+sourceSets.main {
+	java.srcDirs = [rootProject.file('common/src/main/java'), file('src/main/java')]
+	resources.srcDirs = [rootProject.file('common/src/main/resources'), file('src/main/resources')]
+}
+
+minecraft {
+	mappings channel: 'official', version: minecraft_version
+
+	runs {
+		configureEach {
+			workingDir = rootProject.file('run/forge')
+			args '--mixin.config=anvil-insight.mixins.json'
+		}
+		register('client')
+	}
+}
+
+repositories {
+	minecraft.mavenizer(it)
+	maven fg.forgeMaven
+	maven fg.minecraftLibsMaven
+	mavenCentral()
+}
+
+dependencies {
+	implementation minecraft.dependency("net.minecraftforge:forge:${forge_version}")
+}
+
+processResources {
+	def replaceProperties = [
+		minecraft_version          : minecraft_version,
+		forge_loader_version_range : forge_loader_version_range,
+		mod_id                     : mod_id,
+		mod_name                   : mod_name,
+		mod_license                : mod_license,
+		mod_version                : mod_version
+	]
+	inputs.properties replaceProperties
+	filesMatching('META-INF/mods.toml') {
+		expand replaceProperties
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = java_version as int
+	options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+}
+
+jar {
+	manifest {
+		attributes 'MixinConfigs': 'anvil-insight.mixins.json'
+	}
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${rootProject.name}" }
+	}
+}

@@ -1,0 +1,72 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${fabric_loom_version}"
+}
+
+version = rootProject.version
+group = rootProject.group
+
+base {
+	archivesName = "${rootProject.name}-fabric"
+}
+
+loom {
+	runs {
+		client {
+			client()
+			name = 'Fabric Client'
+			runDir = rootProject.file('run/fabric')
+		}
+	}
+
+	splitEnvironmentSourceSets()
+
+	mods {
+		"${fabric_mod_id}" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+sourceSets {
+	main.resources.srcDir rootProject.file('common/src/main/resources')
+	client.java.srcDir rootProject.file('common/src/main/java')
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+	implementation fabricApi.module('fabric-resource-loader-v1', fabric_api_version)
+}
+
+processResources {
+	def replaceProperties = [
+		version               : project.version,
+		fabric_loader_version : fabric_loader_version,
+		fabric_resource_loader_version : fabric_resource_loader_version,
+		minecraft_version     : minecraft_version,
+		java_version          : java_version
+	]
+	inputs.properties replaceProperties
+
+	filesMatching('fabric.mod.json') {
+		expand replaceProperties
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = java_version as int
+	options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.toVersion(java_version)
+	targetCompatibility = JavaVersion.toVersion(java_version)
+}
+
+jar {
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${rootProject.name}" }
+	}
+}
